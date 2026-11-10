@@ -8,7 +8,7 @@ Twelve Data ───►│ US batch: 1/3 of 800 tickers per day (≈267, 8 per 
                 │                                                                                      │
 Alpha Vantage ─►│ Canada (.TRT) + India (.BSE): 25 calls/day → fill feed gaps, then rotate; cross-check   │
 Google Sheet ──►│ "AstroAlpha Scanner Feed" (GOOGLEFINANCE):                                           │
- (feed)         │   Intl tab  – Canada + India prices, 5-session / 1-month change, 100-day high, P/E   │
+ (feed)         │   Intl tab  – Canada + India (208 tickers): prices, 5-session / 1-month change, 100-day high, P/E, market cap   │
                 │   US tab    – P/E, market cap, name for the 800 US tickers                           │
                 │   Tracker   – your 30-Day Test picks + summary (IMPORTRANGE)                         │
                 │                                                                                      │
@@ -46,7 +46,7 @@ The 30-Day Test is the honest check on the astro score: if astro picks don't bea
 1. **Twelve Data API key.** Copy your key from the twelvedata.com dashboard. In GitHub go to *Settings → Secrets and variables → Actions → New repository secret*, name it `TWELVE_DATA_API_KEY`, and paste the key.
    Add a second secret, `ALPHA_VANTAGE_API_KEY`, with your Alpha Vantage key (free at alphavantage.co/support/#api-key).
 2. **Share the feed sheet.** Open *AstroAlpha Scanner Feed* in Google Sheets and choose *Share → General access → Anyone with the link → Viewer*. The scanner reads it as CSV without logging in.
-3. **Connect the feed to your sheets.** In the feed sheet, click cell **Intl!A2**, **TrackerPicks!A1** and **TrackerSummary!A1**, and press **Allow access** on each. This happens once per source sheet.
+3. **Connect the tracker.** In the feed sheet, click cell **TrackerPicks!A1** and press **Allow access**. This happens once. (The Canada and India list is written straight into the feed's Intl tab; to change it, edit the ticker lists in the formula in Intl!A2 and in `data/universe_intl.csv`.)
 4. **Turn on GitHub Pages.** Go to *Settings → Pages → Build and deployment → Deploy from a branch*, choose the default branch and the `/docs` folder, then save. The app will be at `https://aminsarvaiya37-pixel.github.io/Stock-scanner/`.
 5. **Run it.** Go to *Actions → Daily scan → Run workflow*. After that it runs by itself every weekday.
 6. **Install on your phone.** Open the app URL. On iPhone use *Share → Add to Home Screen*; on Android use *⋮ → Install app*.
