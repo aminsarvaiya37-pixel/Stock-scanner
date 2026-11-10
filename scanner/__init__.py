@@ -1,0 +1,1 @@
+"""AstroAlpha stock scanner."""

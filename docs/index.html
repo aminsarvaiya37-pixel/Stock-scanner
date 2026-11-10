@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>AstroAlpha Scanner</title>
+  <meta name="description" content="Daily rankings for 1,000+ US, Canadian and Indian stocks.">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="AstroAlpha">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="title-row">
+      <h1>AstroAlpha</h1>
+      <button id="refresh" class="icon-btn" aria-label="Refresh">↻</button>
+    </div>
+    <p id="status" class="status">Loading…</p>
+    <div id="progress" class="progress" hidden>
+      <div class="bar"><span id="progress-fill"></span></div>
+      <span id="progress-label"></span>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="USA" aria-selected="true">USA</button>
+      <button role="tab" data-tab="Canada">Canada</button>
+      <button role="tab" data-tab="India">India</button>
+      <button role="tab" data-tab="tracker">30-Day Test</button>
+    </nav>
+  </header>
+
+  <main>
+    <div id="notes" class="notes" hidden></div>
+
+    <section id="ranking-view">
+      <div class="controls">
+        <input id="search" type="search" placeholder="Search ticker or company" autocomplete="off">
+        <div class="row">
+          <div class="chips" id="type-chips">
+            <button data-type="all" class="on">All</button>
+            <button data-type="Blue chip">Blue chip</button>
+            <button data-type="Small cap">Small cap</button>
+          </div>
+          <select id="sort" aria-label="Sort by">
+            <option value="combined_score">Combined</option>
+            <option value="fundamental_score">Fundamental</option>
+            <option value="astro_score">Astro</option>
+            <option value="chg_1m">1-month %</option>
+            <option value="chg_5d">5-session %</option>
+            <option value="pe_low">Lowest P/E</option>
+          </select>
+        </div>
+      </div>
+      <ol id="list" class="list"></ol>
+      <button id="more" class="more" hidden>Show more</button>
+      <p id="empty" class="empty" hidden></p>
+    </section>
+
+    <section id="tracker-view" hidden>
+      <h2>Summary</h2>
+      <div class="table-wrap"><table id="tracker-summary"></table></div>
+      <h2>Picks</h2>
+      <ol id="tracker-picks" class="list"></ol>
+      <p id="tracker-empty" class="empty" hidden>No picks entered yet. Fill the yellow cells in the "AstroAlpha 30-Day Test" sheet.</p>
+    </section>
+
+    <p class="foot">Combined score = fundamental (value + momentum) blended with your astro score. Personal research only, not investment advice.</p>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
