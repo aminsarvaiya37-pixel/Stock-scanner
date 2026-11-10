@@ -212,41 +212,31 @@ def test_merge_av_fills_gaps_and_flags_mismatch():
     assert "TCS" in notes[0]
 
 
-class _FakeResp:
-    def __init__(self, payload):
-        self.payload = payload
 
-    def raise_for_status(self):
-        pass
-
-    def json(self):
-        return self.payload
-
-
-class _FakeSession:
-    def __init__(self, payload):
-        self.payload = payload
-
-    def get(self, url, **kwargs):
-        return _FakeResp(self.payload)
-
-
-def test_largest_us_sorted_and_filtered():
-    rows = [
-        {"symbol": "SMALL", "name": "Small Co", "lastsale": "$10", "marketCap": "1,000"},
-        {"symbol": "BRK/B", "name": "Berkshire Hathaway", "lastsale": "$480", "marketCap": "1,000,000"},
-        {"symbol": "PENNY", "name": "Penny Inc", "lastsale": "$1.20", "marketCap": "5,000"},
-        {"symbol": "ABCW", "name": "ABC Warrant", "lastsale": "$5", "marketCap": "9,000"},
-        {"symbol": "XYZ^A", "name": "XYZ Pref", "lastsale": "$25", "marketCap": "9,000"},
-        {"symbol": "MID", "name": "Mid Co", "lastsale": "$40", "marketCap": "50,000"},
-    ]
-    got = universe.fetch_largest_us(_FakeSession({"data": {"rows": rows}}))
-    assert got == ["BRK.B", "MID", "SMALL"]
-
-
-def test_universe_fills_to_size_with_largest(monkeypatch):
+def test_universe_fills_to_size_with_russell(monkeypatch):
     monkeypatch.setattr(universe, "read_tickers", lambda path: ["CORE1"])
     monkeypatch.setattr(universe, "fetch_index_members",
                         lambda s, url: ["SP1", "CORE1"] if "500" in url else ["SP2"])
-    monkeypatch.setattr(universe, "fetch_largest_us", lambda s: ["SP1", "BIG1", "BIG2", "BIG3"])
+    monkeypatch.setattr(universe, "fetch_ishares",
+                        lambda s, url: ["SP1", "BIG1", "BIG2"] if "IWB" in url else ["BIG2", "BIG3", "BIG4"])
     assert universe.build_universe(None, 6) == ["CORE1", "SP1", "SP2", "BIG1", "BIG2", "BIG3"]
+
+
+def test_universe_survives_missing_russell(monkeypatch):
+    def boom(s, url):
+        raise OSError("blocked")
+    monkeypatch.setattr(universe, "read_tickers", lambda path: [])
+    monkeypatch.setattr(universe, "fetch_index_members", lambda s, url: [url[-14:-10]])
+    monkeypatch.setattr(universe, "fetch_ishares", boom)
+    assert len(universe.build_universe(None, 10)) == 3
+
+
+def test_parse_ishares_csv():
+    text = ("\ufeffiShares Russell 2000 ETF\nFund Holdings as of,\"Nov 07, 2026\"\n\n"
+            "Ticker,Name,Sector,Asset Class,Market Value,Weight (%),Location\n"
+            "\"AAA\",\"AAA CORP\",\"Health Care\",\"Equity\",\"1,000\",\"0.5\",\"United States\"\n"
+            "\"XTSLA\",\"BLK CSH FND\",\"Cash\",\"Money Market\",\"9\",\"0.1\",\"United States\"\n"
+            "\"BBB\",\"BBB INC\",\"Energy\",\"Equity\",\"900\",\"0.4\",\"Canada\"\n"
+            "\"CCC\",\"CCC INC\",\"Energy\",\"Equity\",\"800\",\"0.3\",\"United States\"\n"
+            "\"-\",\"USD CASH\",\"Cash\",\"Cash\",\"5\",\"0.0\",\"United States\"\n")
+    assert universe.parse_ishares_csv(text) == ["AAA", "CCC"]

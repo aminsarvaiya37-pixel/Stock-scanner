@@ -1,10 +1,9 @@
-"""US scan universe: your core list, then S&P 500, MidCap 400, SmallCap 600, then the
-largest remaining US stocks by market cap (Nasdaq screener) up to us_universe_size."""
+"""US scan universe: your core list, then S&P 500, MidCap 400 and SmallCap 600, then
+Russell 1000 and Russell 2000 members (iShares holdings, largest first) up to us_universe_size."""
 from __future__ import annotations
 
 import csv
 import logging
-import re
 from datetime import date
 from io import StringIO
 from pathlib import Path
@@ -24,9 +23,11 @@ WIKI_PAGES = [
 OPTIONAL_WIKI_PAGES = [
     "https://en.wikipedia.org/wiki/List_of_S%26P_600_companies",
 ]
-NASDAQ_SCREENER = "https://api.nasdaq.com/api/screener/stocks?tableonly=true&download=true"
-SKIP_NAME = re.compile(r"warrant|\bunits?\b|\brights?\b|preferred|\bnotes?\b|%", re.I)
-MIN_PRICE = 3.0
+# iShares Russell 1000 / Russell 2000 ETF holdings files, listed largest first
+ISHARES_HOLDINGS = [
+    "https://www.ishares.com/us/products/239707/ishares-russell-1000-etf/1467271812596.ajax?fileType=csv&fileName=IWB_holdings&dataType=fund",
+    "https://www.ishares.com/us/products/239710/ishares-russell-2000-etf/1467271812596.ajax?fileType=csv&fileName=IWM_holdings&dataType=fund",
+]
 
 
 def read_tickers(path: Path) -> list[str]:
@@ -68,29 +69,27 @@ def fetch_index_members(session, url: str) -> list[str]:
     raise ValueError(f"no ticker column found at {url}")
 
 
-def _money(text) -> float | None:
-    try:
-        return float(str(text or "").replace("$", "").replace(",", "").strip())
-    except ValueError:
-        return None
+def parse_ishares_csv(text: str) -> list[str]:
+    """US equity tickers from an iShares holdings CSV (metadata lines come before the header)."""
+    lines = text.splitlines()
+    start = next((i for i, line in enumerate(lines) if line.lstrip('﻿"').startswith("Ticker")), None)
+    if start is None:
+        raise ValueError("no Ticker header in holdings file")
+    out = []
+    for row in csv.DictReader(StringIO("\n".join(lines[start:]))):
+        t = (row.get("Ticker") or "").strip()
+        if not t or t == "-" or (row.get("Asset Class") or "").strip() != "Equity":
+            continue
+        if (row.get("Location") or "United States").strip() != "United States":
+            continue
+        out.append(t.replace("/", "."))
+    return out
 
 
-def fetch_largest_us(session) -> list[str]:
-    """All US-listed common stocks from Nasdaq's free screener, largest market cap first."""
-    resp = session.get(NASDAQ_SCREENER, timeout=60,
-                       headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
+def fetch_ishares(session, url: str) -> list[str]:
+    resp = session.get(url, headers={"User-Agent": USER_AGENT}, timeout=60)
     resp.raise_for_status()
-    rows = []
-    for row in resp.json()["data"]["rows"]:
-        sym = str(row.get("symbol", "")).strip()
-        cap, price = _money(row.get("marketCap")), _money(row.get("lastsale"))
-        if not sym or "^" in sym or not cap or not price or price < MIN_PRICE:
-            continue
-        if SKIP_NAME.search(str(row.get("name", ""))):
-            continue
-        rows.append((cap, sym.replace("/", ".")))
-    rows.sort(reverse=True)
-    return [s for _, s in rows]
+    return parse_ishares_csv(resp.content.decode("utf-8-sig", errors="replace"))
 
 
 def build_universe(session, size: int) -> list[str] | None:
@@ -106,11 +105,13 @@ def build_universe(session, size: int) -> list[str] | None:
             extra.append(fetch_index_members(session, url))
         except Exception as exc:
             log.warning("Skipping %s: %s", url, exc)
-    if len(merge_unique(core, *index_lists, *extra, limit=size)) < size:
+    for url in ISHARES_HOLDINGS:
+        if len(merge_unique(core, *index_lists, *extra, limit=size)) >= size:
+            break
         try:
-            extra.append(fetch_largest_us(session))
+            extra.append(fetch_ishares(session, url))
         except Exception as exc:
-            log.warning("Nasdaq screener unavailable, universe stays at index members: %s", exc)
+            log.warning("Skipping iShares holdings (%s): %s", url.split("fileName=")[1][:12], exc)
     return merge_unique(core, *index_lists, *extra, limit=size)
 
 

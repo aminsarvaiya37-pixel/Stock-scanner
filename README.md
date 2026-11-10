@@ -25,7 +25,7 @@ astro_scores ──►│ score + rank per market → docs/data/latest.json, ran
 
 The free Twelve Data plan allows **8 credits a minute and 800 a day**. One daily price history costs 1 credit per symbol.
 
-- The universe is built in this order: your 100 core US names (`data/core_us.csv`), then S&P 500, S&P MidCap 400 and S&P SmallCap 600 members, then the largest remaining US stocks by market cap (Nasdaq's free screener, priced $3 or more). The list is cut off at 2,340 and rebuilt every 30 days, at the start of a cycle.
+- The universe is built in this order: your 100 core US names (`data/core_us.csv`), then S&P 500, S&P MidCap 400 and S&P SmallCap 600 members, then Russell 1000 and Russell 2000 members from the iShares holdings files, largest first. The list is cut off at 2,340 and rebuilt every 30 days, at the start of a cycle.
 - Each weekday run scans one interleaved third of the list, 780 symbols, in roughly 100 minutes. After 3 weekdays every US stock has been refreshed. The next run starts a new cycle.
 - Between scans each US stock keeps its last metrics (`data/us_cache.csv`), so the app always ranks all 2,340. Each row shows when it was last scanned.
 - Canada and India come from GOOGLEFINANCE in the feed sheet every day. Twelve Data's free plan doesn't cover TSX or NSE.
