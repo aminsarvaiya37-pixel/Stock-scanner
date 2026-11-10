@@ -41,6 +41,10 @@ The free Twelve Data plan allows **8 credits a minute and 800 a day**. One daily
 
 Type is **Blue chip** when market cap is at least $10B (US), C$10B (Canada) or ₹50,000 Cr (India). Otherwise it is **Small cap**.
 
+### Scorekeeping: do the picks work?
+
+Every run logs three sets of picks per market (4 blue chips + 2 small caps each) to `data/picks_log.csv`: the **App** picks, the **Fundamental only** picks (astro switched off) and **Random** picks from the same list. After 5, 20 and 60 trading days each pick is compared with the average stock in its market over the same dates. Results: `docs/data/performance.json`, plus a one-line verdict per market in `latest.json`. The verdict says "too early" until 60 picks have been checked at 20 days (about 2 months). App picks need to beat both the market average and the random picks; the gap between App and Fundamental only is what the astro score adds.
+
 The 30-Day Test is the honest check on the astro score: if astro picks don't beat both the random control picks and the index over enough cycles, cut the astro weight.
 
 ## One-time setup

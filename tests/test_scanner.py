@@ -1,3 +1,4 @@
+import csv
 from datetime import date
 
 import pytest
@@ -240,3 +241,57 @@ def test_parse_ishares_csv():
             "\"CCC\",\"CCC INC\",\"Energy\",\"Equity\",\"800\",\"0.3\",\"United States\"\n"
             "\"-\",\"USD CASH\",\"Cash\",\"Cash\",\"5\",\"0.0\",\"United States\"\n")
     assert universe.parse_ishares_csv(text) == ["AAA", "CCC"]
+
+
+def _history_file(tmp_path, closes_by_ticker, start):
+    """Write a rankings-history CSV: one row per trading day per ticker."""
+    from scanner.run import RANKINGS_COLUMNS
+    from scanner import performance as perf
+    hist = tmp_path / "history"
+    hist.mkdir()
+    rows, day = [], start
+    n = len(next(iter(closes_by_ticker.values())))
+    for i in range(n):
+        for t, closes in closes_by_ticker.items():
+            r = dict.fromkeys(RANKINGS_COLUMNS, "")
+            r.update({"Market": "USA", "Ticker": t, "Last close": closes[i], "Close date": day.isoformat()})
+            rows.append(r)
+        day = perf.add_trading_days(day, 1)
+    with (hist / "2026-11.csv").open("w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=RANKINGS_COLUMNS)
+        w.writeheader()
+        w.writerows(rows)
+    return hist
+
+
+def test_scorekeeping_end_to_end(tmp_path):
+    from datetime import date
+    from scanner import performance as perf
+    start = date(2026, 1, 5)  # Monday
+    # 30 stocks: WIN doubles over 70 days, LOSE halves, the rest stay flat
+    closes = {f"F{i:02d}": [100.0] * 70 for i in range(28)}
+    closes["WIN"] = [100.0 + i * 100 / 69 for i in range(70)]
+    closes["LOSE"] = [100.0 - i * 50 / 69 for i in range(70)]
+    hist = _history_file(tmp_path, closes, start)
+
+    rows = [{"ticker": t, "type": "Small cap" if t in ("LOSE", "F00", "F01") else "Blue chip", "close": c[0],
+             "close_date": start.isoformat(), "combined_score": 99 if t == "WIN" else 1,
+             "fundamental_score": 99 if t == "WIN" else 1, "astro_score": None} for t, c in closes.items()]
+    log = tmp_path / "picks.csv"
+    assert perf.log_picks({"USA": rows}, start, log) == 18      # 6 picks x 3 groups
+    assert perf.log_picks({"USA": rows}, start, log) == 0       # once per day
+
+    today = perf.add_trading_days(start, 69)
+    res = perf.evaluate(perf.read_log(log), perf.load_prices(hist), today)
+    app20 = res["USA"]["App"]["20"]
+    assert app20["picks_checked"] == 6
+    assert app20["avg_return_pct"] > 0                          # WIN is in the app picks
+    assert "60" in res["USA"]["App"]
+    assert any("too early" in line for line in perf.verdict(res))
+
+
+def test_random_picks_are_repeatable():
+    from scanner import performance as perf
+    rows = [{"ticker": f"T{i}", "type": "Blue chip" if i % 2 else "Small cap"} for i in range(40)]
+    a = perf.choose_random(rows, "2026-11-10-USA")
+    assert a == perf.choose_random(rows, "2026-11-10-USA") and len(a) == 6

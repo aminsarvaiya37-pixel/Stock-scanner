@@ -16,6 +16,7 @@ from datetime import date, datetime, timezone
 import requests
 
 from . import alphavantage as av
+from . import performance
 from . import sheetfeed
 from .astro import load_astro
 from .common import DATA, DOCS_DATA, clean, load_config, load_state, save_state, to_float
@@ -275,6 +276,13 @@ def main(argv=None) -> int:
             w.writerow(RANKINGS_COLUMNS)
         w.writerows(table)
 
+    picks_added = performance.log_picks(markets, today)
+    results = performance.evaluate(performance.read_log(), performance.load_prices(), today)
+    perf = {"generated_at": now.isoformat(timespec="seconds"), "picks_logged_today": picks_added,
+            "horizons_trading_days": performance.HORIZONS, "verdict": performance.verdict(results),
+            "results": results}
+    (DOCS_DATA / "performance.json").write_text(json.dumps(perf, indent=1))
+
     keys = ["rank", "ticker", "company", "type", "combined_score", "fundamental_score", "astro_score",
             "astro_reason", "close", "currency", "close_date", "chg_5d", "chg_1m", "below_100d_high", "pe",
             "price_source"]
@@ -291,6 +299,7 @@ def main(argv=None) -> int:
         "notes": notes,
         "markets": {m: [{k: clean(r.get(k)) for k in keys} for r in markets.get(m, [])] for m in order if m in markets},
         "tracker": tracker_section(feed),
+        "performance_verdict": perf["verdict"],
     }
     (DOCS_DATA / "latest.json").write_text(json.dumps(latest, separators=(",", ":")))
     save_state(state)
