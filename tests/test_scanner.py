@@ -210,3 +210,43 @@ def test_merge_av_fills_gaps_and_flags_mismatch():
     assert [r["ticker"] for r in rows] == ["RY", "TCS", "NEW"]
     assert "checked by Alpha Vantage" in rows[0]["price_source"]
     assert "TCS" in notes[0]
+
+
+class _FakeResp:
+    def __init__(self, payload):
+        self.payload = payload
+
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return self.payload
+
+
+class _FakeSession:
+    def __init__(self, payload):
+        self.payload = payload
+
+    def get(self, url, **kwargs):
+        return _FakeResp(self.payload)
+
+
+def test_largest_us_sorted_and_filtered():
+    rows = [
+        {"symbol": "SMALL", "name": "Small Co", "lastsale": "$10", "marketCap": "1,000"},
+        {"symbol": "BRK/B", "name": "Berkshire Hathaway", "lastsale": "$480", "marketCap": "1,000,000"},
+        {"symbol": "PENNY", "name": "Penny Inc", "lastsale": "$1.20", "marketCap": "5,000"},
+        {"symbol": "ABCW", "name": "ABC Warrant", "lastsale": "$5", "marketCap": "9,000"},
+        {"symbol": "XYZ^A", "name": "XYZ Pref", "lastsale": "$25", "marketCap": "9,000"},
+        {"symbol": "MID", "name": "Mid Co", "lastsale": "$40", "marketCap": "50,000"},
+    ]
+    got = universe.fetch_largest_us(_FakeSession({"data": {"rows": rows}}))
+    assert got == ["BRK.B", "MID", "SMALL"]
+
+
+def test_universe_fills_to_size_with_largest(monkeypatch):
+    monkeypatch.setattr(universe, "read_tickers", lambda path: ["CORE1"])
+    monkeypatch.setattr(universe, "fetch_index_members",
+                        lambda s, url: ["SP1", "CORE1"] if "500" in url else ["SP2"])
+    monkeypatch.setattr(universe, "fetch_largest_us", lambda s: ["SP1", "BIG1", "BIG2", "BIG3"])
+    assert universe.build_universe(None, 6) == ["CORE1", "SP1", "SP2", "BIG1", "BIG2", "BIG3"]

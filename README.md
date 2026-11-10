@@ -2,16 +2,16 @@
 
 **App:** https://aminsarvaiya37-pixel.github.io/Stock-scanner/
 
-Every weekday this repository ranks about **1,000 stocks**: **800 US** stocks, plus your **Canada** and **India** lists. It publishes the results to a phone web app and to your Google Sheets.
+Every weekday this repository ranks about **2,500 stocks**: **2,340 US** stocks, plus your **Canada** and **India** lists. It publishes the results to a phone web app and to your Google Sheets.
 
 ```
                 ┌──────────────────────── GitHub Actions (weekdays 22:35 UTC) ────────────────────────┐
-Twelve Data ───►│ US batch: 1/3 of 800 tickers per day (≈267, 8 per minute, ≤780 credits) → us_cache │
+Twelve Data ───►│ US batch: 1/3 of 2,340 tickers per day (780, 8 per minute, ≤780 credits) → us_cache│
                 │                                                                                      │
 Alpha Vantage ─►│ Canada (.TRT) + India (.BSE): 25 calls/day → fill feed gaps, then rotate; cross-check   │
 Google Sheet ──►│ "AstroAlpha Scanner Feed" (GOOGLEFINANCE):                                           │
  (feed)         │   Intl tab  – Canada + India (208 tickers): prices, 5-session / 1-month change, 100-day high, P/E, market cap   │
-                │   US tab    – P/E, market cap, name for the 800 US tickers                           │
+                │   US tab    – P/E, market cap, name for the 2,340 US tickers                         │
                 │   Tracker   – your 30-Day Test picks + summary (IMPORTRANGE)                         │
                 │                                                                                      │
 astro_scores ──►│ score + rank per market → docs/data/latest.json, rankings.csv, data/history/*.csv   │
@@ -21,13 +21,13 @@ astro_scores ──►│ score + rank per market → docs/data/latest.json, ran
           Phone app (GitHub Pages, docs/)          "AstroAlpha Rankings Log" → Rankings tab (IMPORTDATA)
 ```
 
-## How the 800 US stocks are covered in 3 days
+## How the 2,340 US stocks are covered in 3 days
 
 The free Twelve Data plan allows **8 credits a minute and 800 a day**. One daily price history costs 1 credit per symbol.
 
-- The universe is built in this order: your 100 core US names (`data/core_us.csv`), then S&P 500 members, then S&P MidCap 400 members. The list is cut off at 800 and rebuilt every 30 days, at the start of a cycle.
-- Each weekday run scans one interleaved third of the list, about 267 symbols, in roughly 35 minutes. After 3 weekdays every US stock has been refreshed. The next run starts a new cycle.
-- Between scans each US stock keeps its last metrics (`data/us_cache.csv`), so the app always ranks all 800. Each row shows when it was last scanned.
+- The universe is built in this order: your 100 core US names (`data/core_us.csv`), then S&P 500, S&P MidCap 400 and S&P SmallCap 600 members, then the largest remaining US stocks by market cap (Nasdaq's free screener, priced $3 or more). The list is cut off at 2,340 and rebuilt every 30 days, at the start of a cycle.
+- Each weekday run scans one interleaved third of the list, 780 symbols, in roughly 100 minutes. After 3 weekdays every US stock has been refreshed. The next run starts a new cycle.
+- Between scans each US stock keeps its last metrics (`data/us_cache.csv`), so the app always ranks all 2,340. Each row shows when it was last scanned.
 - Canada and India come from GOOGLEFINANCE in the feed sheet every day. Twelve Data's free plan doesn't cover TSX or NSE.
 - **Alpha Vantage** (`.TRT` for Toronto, `.BSE` for India) backs up the feed. The free key allows 25 calls a day, so each run spends them first on stocks Google Finance couldn't price, then on the stocks refreshed longest ago. That's a full pass over the ~210 Canada and India names about every 9 trading days. Gaps are filled from Alpha Vantage data up to 14 days old. When both sources have the same day's close and differ by more than 3%, the app shows a warning. With a premium key, raise `alphavantage.daily_calls` in `config.json`.
 

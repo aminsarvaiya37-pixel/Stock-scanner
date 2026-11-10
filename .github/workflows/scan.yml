@@ -4,6 +4,10 @@ on:
   schedule:
     # Weekdays 22:35 UTC, after the US close (Canada and India are closed too).
     - cron: "35 22 * * 1-5"
+  push:
+    # runs once whenever the settings change (results commits don't touch this file)
+    branches: [claude/i-connected-j88f6j]
+    paths: [config.json]
   workflow_dispatch:
     inputs:
       skip_twelvedata:
@@ -21,7 +25,7 @@ concurrency:
 jobs:
   scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 170   # 780 US symbols at 8/minute is ~100 minutes
     steps:
       - uses: actions/checkout@v4
 
@@ -36,8 +40,8 @@ jobs:
 
       - name: Scan
         env:
-          TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
-          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+          TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY || secrets.TWELVE_DATA_KEY }}
+          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY || secrets.ALPHA_VANTAGE_KEY }}
         run: |
           if [ "${{ inputs.skip_twelvedata }}" = "true" ]; then
             python -m scanner.run --skip-twelvedata

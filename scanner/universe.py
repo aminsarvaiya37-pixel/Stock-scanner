@@ -1,8 +1,10 @@
-"""US scan universe: your core list first, then S&P 500 and S&P MidCap 400 members."""
+"""US scan universe: your core list, then S&P 500, MidCap 400, SmallCap 600, then the
+largest remaining US stocks by market cap (Nasdaq screener) up to us_universe_size."""
 from __future__ import annotations
 
 import csv
 import logging
+import re
 from datetime import date
 from io import StringIO
 from pathlib import Path
@@ -19,6 +21,12 @@ WIKI_PAGES = [
     "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies",
     "https://en.wikipedia.org/wiki/List_of_S%26P_400_companies",
 ]
+OPTIONAL_WIKI_PAGES = [
+    "https://en.wikipedia.org/wiki/List_of_S%26P_600_companies",
+]
+NASDAQ_SCREENER = "https://api.nasdaq.com/api/screener/stocks?tableonly=true&download=true"
+SKIP_NAME = re.compile(r"warrant|\bunits?\b|\brights?\b|preferred|\bnotes?\b|%", re.I)
+MIN_PRICE = 3.0
 
 
 def read_tickers(path: Path) -> list[str]:
@@ -60,6 +68,31 @@ def fetch_index_members(session, url: str) -> list[str]:
     raise ValueError(f"no ticker column found at {url}")
 
 
+def _money(text) -> float | None:
+    try:
+        return float(str(text or "").replace("$", "").replace(",", "").strip())
+    except ValueError:
+        return None
+
+
+def fetch_largest_us(session) -> list[str]:
+    """All US-listed common stocks from Nasdaq's free screener, largest market cap first."""
+    resp = session.get(NASDAQ_SCREENER, timeout=60,
+                       headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
+    resp.raise_for_status()
+    rows = []
+    for row in resp.json()["data"]["rows"]:
+        sym = str(row.get("symbol", "")).strip()
+        cap, price = _money(row.get("marketCap")), _money(row.get("lastsale"))
+        if not sym or "^" in sym or not cap or not price or price < MIN_PRICE:
+            continue
+        if SKIP_NAME.search(str(row.get("name", ""))):
+            continue
+        rows.append((cap, sym.replace("/", ".")))
+    rows.sort(reverse=True)
+    return [s for _, s in rows]
+
+
 def build_universe(session, size: int) -> list[str] | None:
     core = read_tickers(CORE_PATH)
     try:
@@ -67,7 +100,18 @@ def build_universe(session, size: int) -> list[str] | None:
     except Exception as exc:  # network or parse failure: keep the old universe
         log.warning("Could not refresh index members: %s", exc)
         return None
-    return merge_unique(core, *index_lists, limit=size)
+    extra: list[list[str]] = []
+    for url in OPTIONAL_WIKI_PAGES:
+        try:
+            extra.append(fetch_index_members(session, url))
+        except Exception as exc:
+            log.warning("Skipping %s: %s", url, exc)
+    if len(merge_unique(core, *index_lists, *extra, limit=size)) < size:
+        try:
+            extra.append(fetch_largest_us(session))
+        except Exception as exc:
+            log.warning("Nasdaq screener unavailable, universe stays at index members: %s", exc)
+    return merge_unique(core, *index_lists, *extra, limit=size)
 
 
 def load_universe(session, cfg: dict, state: dict, today: date, allow_refresh: bool) -> list[str]:
