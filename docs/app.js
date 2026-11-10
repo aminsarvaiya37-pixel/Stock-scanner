@@ -45,6 +45,10 @@
     $("progress-fill").style.width = `${pctDone}%`;
     $("progress-label").textContent =
       `US scanned ${d.us_with_data}/${d.us_universe} · batch ${d.batch.index}/${d.batch.of}`;
+    const av = d.alpha_vantage;
+    $("intl-label").textContent = av
+      ? `Canada + India: Google Finance, checked by Alpha Vantage (${av.covered || 0}/${d.intl_universe} covered, ${av.refreshed} today)`
+      : "";
 
     const notes = d.notes || [];
     $("notes").hidden = notes.length === 0;

@@ -151,3 +151,62 @@ def test_intl_rows_parse_feed():
     rows = run.intl_rows(feed)
     assert len(rows) == 1
     assert rows[0]["close"] == 288.32 and rows[0]["market_cap"] == 4.1e11
+
+
+# ---- Alpha Vantage -------------------------------------------------------
+from scanner import alphavantage as avmod
+
+
+def test_av_symbols():
+    assert avmod.av_symbol("Canada", "TECK.B") == "TECK-B.TRT"
+    assert avmod.av_symbol("India", "RELIANCE") == "RELIANCE.BSE"
+    assert avmod.av_symbol("USA", "AAPL") is None
+
+
+def test_av_targets_gaps_first_then_oldest():
+    uni = [("Canada", "A"), ("Canada", "B"), ("India", "C"), ("India", "D")]
+    cache = {("Canada", "A"): {"scanned_on": "2026-11-01"}, ("Canada", "B"): {"scanned_on": "2026-11-05"},
+             ("India", "D"): {"scanned_on": "2026-11-09"}}
+    picked = avmod.pick_targets(uni, {("India", "D")}, cache, 3)
+    assert picked == [("India", "D"), ("India", "C"), ("Canada", "A")]
+
+
+class AVSession:
+    def __init__(self, payloads):
+        self.payloads = list(payloads)
+
+    def get(self, url, params=None, timeout=None):
+        return FakeResp(self.payloads.pop(0))
+
+
+def av_series(n):
+    return {"Time Series (Daily)": {f"2026-10-{i + 1:02d}": {"4. close": str(100 + i)} for i in range(n)}}
+
+
+def test_av_refresh_stops_at_limit():
+    session = AVSession([av_series(25), {"Information": "Invalid API call"}, {"Note": "25 requests per day"}, av_series(5)])
+    client = avmod.AlphaVantage(session, "k", {"daily_calls": 25, "seconds_between_calls": 0}, sleep=lambda s: None)
+    cache = {}
+    targets = [("Canada", "RY"), ("India", "BAD"), ("India", "TCS"), ("India", "NEVER")]
+    ok, errors = client.refresh(targets, cache, date(2026, 11, 10))
+    assert ok == 1 and cache[("Canada", "RY")]["close"] == 124
+    assert errors[("India", "TCS")] == "daily limit reached"
+    assert ("India", "NEVER") not in errors and client.calls == 3
+
+
+def test_merge_av_fills_gaps_and_flags_mismatch():
+    feed = [{"market": "Canada", "ticker": "RY", "close": 100.0, "close_date": "2026-11-09", "price_source": "GF"},
+            {"market": "India", "ticker": "TCS", "close": 50.0, "close_date": "2026-11-09", "price_source": "GF"}]
+    cache = {
+        ("Canada", "RY"): {"close": "100.5", "close_date": "2026-11-09", "scanned_on": "2026-11-10"},
+        ("India", "TCS"): {"close": "60", "close_date": "2026-11-09", "scanned_on": "2026-11-10"},
+        ("India", "NEW"): {"close": "10", "close_date": "2026-11-09", "chg_1m": "5", "scanned_on": "2026-11-08"},
+        ("India", "OLD"): {"close": "10", "close_date": "2026-10-01", "scanned_on": "2026-10-01"},
+    }
+    uni = [("Canada", "RY"), ("India", "TCS"), ("India", "NEW"), ("India", "OLD")]
+    notes = []
+    rows, info = run.merge_av(feed, uni, cache, date(2026, 11, 10), 14, notes)
+    assert info == {"filled_gaps": 1, "mismatches": 1}
+    assert [r["ticker"] for r in rows] == ["RY", "TCS", "NEW"]
+    assert "checked by Alpha Vantage" in rows[0]["price_source"]
+    assert "TCS" in notes[0]

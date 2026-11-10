@@ -37,6 +37,7 @@ jobs:
       - name: Scan
         env:
           TWELVE_DATA_API_KEY: ${{ secrets.TWELVE_DATA_API_KEY }}
+          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
         run: |
           if [ "${{ inputs.skip_twelvedata }}" = "true" ]; then
             python -m scanner.run --skip-twelvedata

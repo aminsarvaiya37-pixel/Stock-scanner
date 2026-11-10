@@ -15,6 +15,7 @@ from datetime import date, datetime, timezone
 
 import requests
 
+from . import alphavantage as av
 from . import sheetfeed
 from .astro import load_astro
 from .common import DATA, DOCS_DATA, clean, load_config, load_state, save_state, to_float
@@ -102,6 +103,68 @@ def intl_rows(intl_feed) -> list[dict]:
     return rows
 
 
+def intl_universe(feed_rows: list[dict]) -> list[tuple[str, str]]:
+    """Canada + India tickers: the sheet feed's list (your Screen tab) plus data/universe_intl.csv."""
+    keys = [(r["market"], r["ticker"]) for r in feed_rows]
+    path = DATA / "universe_intl.csv"
+    if path.exists():
+        with path.open() as fh:
+            keys += [(r["Market"], r["Ticker"]) for r in csv.DictReader(fh)]
+    return list(dict.fromkeys(k for k in keys if k[0] in av.SUFFIX))
+
+
+def scan_intl_av(session, cfg, universe, feed_rows, cache, today, notes) -> dict:
+    api_key = os.environ.get("ALPHA_VANTAGE_API_KEY", "").strip()
+    info = {"refreshed": 0, "errors": 0, "budget": cfg["alphavantage"]["daily_calls"]}
+    if not api_key:
+        notes.append("ALPHA_VANTAGE_API_KEY not set: Canada/India use the Google Sheet feed only.")
+        return info
+    priced = {(r["market"], r["ticker"]) for r in feed_rows}
+    missing = {k for k in universe if k not in priced}
+    targets = av.pick_targets(universe, missing, cache, cfg["alphavantage"]["daily_calls"])
+    client = av.AlphaVantage(session, api_key, cfg["alphavantage"])
+    ok, errors = client.refresh(targets, cache, today)
+    info.update(refreshed=ok, errors=len(errors), calls=client.calls)
+    if errors:
+        sample = ", ".join(f"{t}: {e}" for (_, t), e in list(errors.items())[:3])
+        notes.append(f"Alpha Vantage: {len(errors)} of {len(targets)} lookups failed (e.g. {sample}).")
+    return info
+
+
+def merge_av(feed_rows, universe, cache, today, max_age_days, notes) -> tuple[list[dict], dict]:
+    """Fill sheet-feed gaps from Alpha Vantage and flag price disagreements."""
+    rows = list(feed_rows)
+    have = {(r["market"], r["ticker"]): r for r in feed_rows}
+    filled, mismatches = 0, []
+    for key in universe:
+        c = cache.get(key)
+        if not c or to_float(c.get("close")) is None:
+            continue
+        age = (today - date.fromisoformat(c["scanned_on"])).days if c.get("scanned_on") else 999
+        row = have.get(key)
+        if row is None:
+            if age > max_age_days:
+                continue
+            market, ticker = key
+            rows.append({
+                "market": market, "ticker": ticker, "company": "", "pe": None, "market_cap": None,
+                "currency": CURRENCY.get(market, ""), "close": to_float(c["close"]), "close_date": c.get("close_date", ""),
+                "chg_5d": to_float(c.get("chg_5d")), "chg_1m": to_float(c.get("chg_1m")),
+                "below_100d_high": to_float(c.get("below_100d_high")),
+                "price_source": f"Alpha Vantage, scanned {c.get('scanned_on', '')}",
+            })
+            filled += 1
+        elif row.get("close_date") == c.get("close_date"):
+            gap = abs(row["close"] / to_float(c["close"]) - 1) * 100
+            if gap > 3:
+                mismatches.append(f"{key[1]} ({gap:.1f}%)")
+            else:
+                row["price_source"] += " · checked by Alpha Vantage"
+    if mismatches:
+        notes.append(f"Google Finance and Alpha Vantage disagree by >3% on: {', '.join(mismatches[:8])}.")
+    return rows, {"filled_gaps": filled, "mismatches": len(mismatches)}
+
+
 def tracker_section(feed) -> dict:
     picks = [p for p in sheetfeed.rows_to_dicts(feed.get("tracker_picks", [])) if p.get("Ticker")]
     summary = [row for row in feed.get("tracker_summary", []) if any(c.strip() for c in row)]
@@ -148,6 +211,7 @@ def to_rankings_row(r, logged_at, cycle_start) -> list:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--skip-twelvedata", action="store_true")
+    parser.add_argument("--skip-alphavantage", action="store_true")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
@@ -169,8 +233,20 @@ def main(argv=None) -> int:
     write_cache(cache)
 
     feed = read_feed(session, cfg, notes)
+    feed_intl = intl_rows(feed.get("intl", []))
+    universe_intl = intl_universe(feed_intl)
+    av_cache = av.read_cache()
+    if args.skip_alphavantage:
+        av_info = {"refreshed": 0, "errors": 0, "budget": cfg["alphavantage"]["daily_calls"]}
+    else:
+        av_info = scan_intl_av(session, cfg, universe_intl, feed_intl, av_cache, today, notes)
+    av.write_cache(av_cache)
+    merged_intl, merge_info = merge_av(feed_intl, universe_intl, av_cache, today,
+                                      cfg["alphavantage"]["max_age_days"], notes)
+    av_info.update(merge_info, covered=sum(1 for k in universe_intl if k in av_cache))
+
     astro = load_astro(today)
-    rows = us_rows(universe, cache, feed.get("us", [])) + intl_rows(feed.get("intl", []))
+    rows = us_rows(universe, cache, feed.get("us", [])) + merged_intl
 
     markets: dict[str, list[dict]] = {}
     for r in rows:
@@ -208,6 +284,8 @@ def main(argv=None) -> int:
         "batch": batch,
         "us_universe": len(universe),
         "us_with_data": len(markets.get("USA", [])),
+        "intl_universe": len(universe_intl),
+        "alpha_vantage": av_info,
         "astro_enabled": bool(astro),
         "fundamental_weight_pct": cfg["fundamental_weight_pct"] if astro else 100,
         "notes": notes,

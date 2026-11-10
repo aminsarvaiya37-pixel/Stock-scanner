@@ -17,6 +17,12 @@
     "history_sessions": 130
   },
 
+  "alphavantage": {
+    "daily_calls": 25,
+    "seconds_between_calls": 2,
+    "max_age_days": 14
+  },
+
   "fundamental_weight_pct": 70,
   "fundamental_components": {
     "earnings_yield": 0.40,
