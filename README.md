@@ -1,5 +1,7 @@
 # AstroAlpha Stock Scanner
 
+**App:** https://aminsarvaiya37-pixel.github.io/Stock-scanner/
+
 Every weekday this repository ranks about **1,000 stocks**: **800 US** stocks, plus your **Canada** and **India** lists. It publishes the results to a phone web app and to your Google Sheets.
 
 ```
