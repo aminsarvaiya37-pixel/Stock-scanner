@@ -22,7 +22,9 @@ WIKI_PAGES = [
 ]
 OPTIONAL_WIKI_PAGES = [
     "https://en.wikipedia.org/wiki/List_of_S%26P_600_companies",
+    "https://en.wikipedia.org/wiki/Russell_1000_Index",
 ]
+BUILD_NOTES: list[str] = []     # shown in latest.json notes so failures are visible
 # iShares Russell 1000 / Russell 2000 ETF holdings files, listed largest first
 ISHARES_HOLDINGS = [
     "https://www.ishares.com/us/products/239707/ishares-russell-1000-etf/1467271812596.ajax?fileType=csv&fileName=IWB_holdings&dataType=fund",
@@ -105,6 +107,7 @@ def build_universe(session, size: int) -> list[str] | None:
             extra.append(fetch_index_members(session, url))
         except Exception as exc:
             log.warning("Skipping %s: %s", url, exc)
+            BUILD_NOTES.append(f"Universe source skipped: {url.rsplit('/', 1)[-1]} ({type(exc).__name__}: {str(exc)[:80]})")
     for url in ISHARES_HOLDINGS:
         if len(merge_unique(core, *index_lists, *extra, limit=size)) >= size:
             break
@@ -112,6 +115,7 @@ def build_universe(session, size: int) -> list[str] | None:
             extra.append(fetch_ishares(session, url))
         except Exception as exc:
             log.warning("Skipping iShares holdings (%s): %s", url.split("fileName=")[1][:12], exc)
+            BUILD_NOTES.append(f"Universe source skipped: iShares {url.split('fileName=')[1][:3]} ({type(exc).__name__}: {str(exc)[:80]})")
     return merge_unique(core, *index_lists, *extra, limit=size)
 
 

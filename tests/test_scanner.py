@@ -229,7 +229,7 @@ def test_universe_survives_missing_russell(monkeypatch):
     monkeypatch.setattr(universe, "read_tickers", lambda path: [])
     monkeypatch.setattr(universe, "fetch_index_members", lambda s, url: [url[-14:-10]])
     monkeypatch.setattr(universe, "fetch_ishares", boom)
-    assert len(universe.build_universe(None, 10)) == 3
+    assert len(universe.build_universe(None, 10)) == 4   # S&P 500/400/600 + Russell 1000 pages
 
 
 def test_parse_ishares_csv():
@@ -295,3 +295,24 @@ def test_random_picks_are_repeatable():
     rows = [{"ticker": f"T{i}", "type": "Blue chip" if i % 2 else "Small cap"} for i in range(40)]
     a = perf.choose_random(rows, "2026-11-10-USA")
     assert a == perf.choose_random(rows, "2026-11-10-USA") and len(a) == 6
+
+
+def test_twelvedata_retries_dropped_connection():
+    import requests as rq
+
+    class Resp:
+        def json(self):
+            return {"status": "ok", "values": []}
+
+    class Flaky:
+        calls = 0
+
+        def get(self, url, params, timeout):
+            Flaky.calls += 1
+            if Flaky.calls == 1:
+                raise rq.ConnectionError("Remote end closed connection")
+            return Resp()
+
+    cfg = {"symbols_per_request": 8, "seconds_between_requests": 0, "daily_credit_cap": 800, "history_sessions": 10}
+    td = TwelveData(Flaky(), "k", cfg, sleep=lambda s: None)
+    assert td._request(["AAA"])["status"] == "ok" and Flaky.calls == 2

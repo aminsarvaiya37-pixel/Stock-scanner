@@ -5,6 +5,8 @@ import logging
 import time
 from typing import Callable
 
+import requests
+
 log = logging.getLogger(__name__)
 
 API = "https://api.twelvedata.com/time_series"
@@ -34,8 +36,13 @@ class TwelveData:
             "apikey": self.api_key,
         }
         for attempt in range(4):
-            resp = self.session.get(API, params=params, timeout=60)
-            payload = resp.json()
+            try:
+                resp = self.session.get(API, params=params, timeout=60)
+                payload = resp.json()
+            except (requests.RequestException, ValueError) as exc:  # dropped connection or bad body
+                log.info("Request failed (%s), retrying in 15s (attempt %d)", type(exc).__name__, attempt + 1)
+                self.sleep(15)
+                continue
             if isinstance(payload, dict) and payload.get("code") == 429:
                 log.info("Rate limited, waiting 65s (attempt %d)", attempt + 1)
                 self.sleep(65)

@@ -225,6 +225,10 @@ def main(argv=None) -> int:
 
     at_cycle_start = state.get("next_batch", 0) % cfg["cycle_days"] == 0
     universe = load_universe(session, cfg, state, today, allow_refresh=at_cycle_start)
+    from .universe import BUILD_NOTES
+    notes.extend(BUILD_NOTES)
+    if len(universe) < cfg["us_universe_size"]:
+        notes.append(f"US universe has {len(universe)} of {cfg['us_universe_size']} target stocks.")
     cache = read_cache()
 
     if args.skip_twelvedata:
