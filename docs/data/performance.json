@@ -1,11 +1,94 @@
 {
- "generated_at": "2026-11-18T03:48:07+00:00",
+ "generated_at": "2026-11-19T03:46:43+00:00",
  "picks_logged_today": 54,
  "horizons_trading_days": [
   5,
   20,
   60
  ],
- "verdict": [],
- "results": {}
+ "verdict": [
+  "USA: too early - 0 of 60 picks checked at 20 days.",
+  "Canada: too early - 0 of 60 picks checked at 20 days.",
+  "India: too early - 0 of 60 picks checked at 20 days."
+ ],
+ "results": {
+  "USA": {
+   "App": {
+    "5": {
+     "picks_checked": 6,
+     "avg_return_pct": -0.85,
+     "vs_market_avg_pct": 1.84,
+     "beat_market_pct": 83
+    }
+   },
+   "Fundamental only": {
+    "5": {
+     "picks_checked": 6,
+     "avg_return_pct": -0.85,
+     "vs_market_avg_pct": 1.84,
+     "beat_market_pct": 83
+    }
+   },
+   "Random": {
+    "5": {
+     "picks_checked": 6,
+     "avg_return_pct": -4.82,
+     "vs_market_avg_pct": -2.13,
+     "beat_market_pct": 50
+    }
+   }
+  },
+  "Canada": {
+   "App": {
+    "5": {
+     "picks_checked": 6,
+     "avg_return_pct": -6.25,
+     "vs_market_avg_pct": -2.12,
+     "beat_market_pct": 83
+    }
+   },
+   "Fundamental only": {
+    "5": {
+     "picks_checked": 6,
+     "avg_return_pct": -6.25,
+     "vs_market_avg_pct": -2.12,
+     "beat_market_pct": 83
+    }
+   },
+   "Random": {
+    "5": {
+     "picks_checked": 6,
+     "avg_return_pct": -4.95,
+     "vs_market_avg_pct": -0.83,
+     "beat_market_pct": 50
+    }
+   }
+  },
+  "India": {
+   "App": {
+    "5": {
+     "picks_checked": 6,
+     "avg_return_pct": 0.27,
+     "vs_market_avg_pct": 1.04,
+     "beat_market_pct": 67
+    }
+   },
+   "Fundamental only": {
+    "5": {
+     "picks_checked": 6,
+     "avg_return_pct": 0.27,
+     "vs_market_avg_pct": 1.04,
+     "beat_market_pct": 67
+    }
+   },
+   "Random": {
+    "5": {
+     "picks_checked": 6,
+     "avg_return_pct": 2.17,
+     "vs_market_avg_pct": 2.94,
+     "beat_market_pct": 83
+    }
+   }
+  }
+ }
 }
