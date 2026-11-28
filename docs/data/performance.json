@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-27T04:26:49+00:00",
+ "generated_at": "2026-11-28T04:08:00+00:00",
  "picks_logged_today": 54,
  "horizons_trading_days": [
   5,
@@ -15,78 +15,78 @@
   "USA": {
    "App": {
     "5": {
-     "picks_checked": 34,
-     "avg_return_pct": -0.51,
-     "vs_market_avg_pct": 3.35,
-     "beat_market_pct": 91
+     "picks_checked": 43,
+     "avg_return_pct": 0.08,
+     "vs_market_avg_pct": 2.97,
+     "beat_market_pct": 88
     }
    },
    "Fundamental only": {
     "5": {
-     "picks_checked": 34,
-     "avg_return_pct": -0.51,
-     "vs_market_avg_pct": 3.35,
-     "beat_market_pct": 91
+     "picks_checked": 43,
+     "avg_return_pct": 0.08,
+     "vs_market_avg_pct": 2.97,
+     "beat_market_pct": 88
     }
    },
    "Random": {
     "5": {
-     "picks_checked": 35,
-     "avg_return_pct": -4.25,
-     "vs_market_avg_pct": -0.61,
-     "beat_market_pct": 54
+     "picks_checked": 41,
+     "avg_return_pct": -3.14,
+     "vs_market_avg_pct": -0.22,
+     "beat_market_pct": 51
     }
    }
   },
   "Canada": {
    "App": {
     "5": {
-     "picks_checked": 42,
-     "avg_return_pct": -4.1,
-     "vs_market_avg_pct": 0.43,
-     "beat_market_pct": 69
+     "picks_checked": 54,
+     "avg_return_pct": -2.84,
+     "vs_market_avg_pct": -0.25,
+     "beat_market_pct": 57
     }
    },
    "Fundamental only": {
     "5": {
-     "picks_checked": 42,
-     "avg_return_pct": -4.1,
-     "vs_market_avg_pct": 0.43,
-     "beat_market_pct": 69
+     "picks_checked": 54,
+     "avg_return_pct": -2.84,
+     "vs_market_avg_pct": -0.25,
+     "beat_market_pct": 57
     }
    },
    "Random": {
     "5": {
-     "picks_checked": 42,
-     "avg_return_pct": -4.69,
-     "vs_market_avg_pct": -0.15,
-     "beat_market_pct": 57
+     "picks_checked": 54,
+     "avg_return_pct": -3.04,
+     "vs_market_avg_pct": -0.45,
+     "beat_market_pct": 52
     }
    }
   },
   "India": {
    "App": {
     "5": {
-     "picks_checked": 42,
-     "avg_return_pct": 2.02,
-     "vs_market_avg_pct": 2.2,
-     "beat_market_pct": 74
+     "picks_checked": 54,
+     "avg_return_pct": 1.44,
+     "vs_market_avg_pct": 1.47,
+     "beat_market_pct": 65
     }
    },
    "Fundamental only": {
     "5": {
-     "picks_checked": 42,
-     "avg_return_pct": 2.02,
-     "vs_market_avg_pct": 2.2,
-     "beat_market_pct": 74
+     "picks_checked": 54,
+     "avg_return_pct": 1.44,
+     "vs_market_avg_pct": 1.47,
+     "beat_market_pct": 65
     }
    },
    "Random": {
     "5": {
-     "picks_checked": 42,
-     "avg_return_pct": 0.28,
-     "vs_market_avg_pct": 0.46,
-     "beat_market_pct": 57
+     "picks_checked": 54,
+     "avg_return_pct": 0.5,
+     "vs_market_avg_pct": 0.53,
+     "beat_market_pct": 59
     }
    }
   }
